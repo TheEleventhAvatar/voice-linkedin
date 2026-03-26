@@ -23,4 +23,19 @@ describe("defineMcpServer", () => {
       "changelog",
     ]);
   });
+
+  it("flattens nested resource trees into dot-delimited MCP names", () => {
+    expect([...mcp.resources.keys()]).toEqual([
+      "config",
+      "welcome",
+      "latest.bundle",
+    ]);
+  });
+
+  it("flattens nested resource template trees into dot-delimited MCP names", () => {
+    expect([...mcp.resourceTemplates.keys()]).toEqual([
+      "files.byId",
+      "docs.section",
+    ]);
+  });
 });

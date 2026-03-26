@@ -1,15 +1,21 @@
 import type {
+  Annotations,
+  BlobResourceContents,
   ContentBlock,
   GetPromptResult,
   PromptArgument,
   PromptMessage,
+  ReadResourceResult,
   Role,
+  TextResourceContents,
   ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { UriTemplate } from "@modelcontextprotocol/sdk/shared/uriTemplate.js";
 import type { FunctionReference, GenericActionCtx, HttpRouter } from "convex/server";
 import type { z } from "zod";
 
 export type ConvexFunctionKind = "query" | "mutation" | "action";
+export type ConvexReadKind = Exclude<ConvexFunctionKind, "mutation">;
 
 export type ConvexValidatorJson =
   | {
@@ -94,7 +100,7 @@ export type ToolArgsInput =
   | ToolArgsSchema
   | ((builder: ToolArgsBuilder) => ToolArgsShape | ToolArgsSchema);
 
-type ToolArgsSchemaFromInput<TArgs extends ToolArgsInput> =
+type ArgsSchemaFromInput<TArgs extends ToolArgsInput> =
   TArgs extends (...args: never[]) => infer R
     ? R extends ToolArgsSchema
       ? R
@@ -113,7 +119,7 @@ export type PromptArgsSchema = ToolArgsSchema;
 export type PromptArgsBuilder = ToolArgsBuilder;
 export type PromptArgsOutput<TArgs extends PromptArgsInput | undefined> =
   TArgs extends PromptArgsInput
-    ? z.output<ToolArgsSchemaFromInput<TArgs>>
+    ? z.output<ArgsSchemaFromInput<TArgs>>
     : Record<string, never>;
 export type PromptResponse =
   | GetPromptResult
@@ -142,6 +148,113 @@ export interface PromptTree {
   [key: string]: RawPromptDefinition | PromptTree;
 }
 
+export type ResourceReference = FunctionReference<any, any>;
+export type ResourceParamsInput = ToolArgsInput;
+export type ResourceParamsShape = ToolArgsShape;
+export type ResourceParamsSchema = ToolArgsSchema;
+export type ResourceParamsBuilder = ToolArgsBuilder;
+export type ResourceParamsOutput<TParams extends ResourceParamsInput | undefined> =
+  TParams extends ResourceParamsInput
+    ? z.output<ArgsSchemaFromInput<TParams>>
+    : Record<string, never>;
+
+export interface ResourceOptions {
+  kind: ConvexReadKind;
+  uri: string;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  size?: number;
+}
+
+export interface RawResourceDefinition {
+  ref: ResourceReference;
+  kind: ConvexReadKind;
+  uri: string;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  size?: number;
+}
+
+export interface ResourceTree {
+  [key: string]: RawResourceDefinition | ResourceTree;
+}
+
+export interface ResourceTemplateOptions<
+  TParams extends ResourceParamsInput | undefined = undefined,
+> {
+  kind: ConvexReadKind;
+  uriTemplate: string;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  params?: TParams;
+}
+
+export interface RawResourceTemplateDefinition {
+  ref: ResourceReference;
+  kind: ConvexReadKind;
+  uriTemplate: string;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  params?: ResourceParamsInput;
+}
+
+export interface ResourceTemplateTree {
+  [key: string]: RawResourceTemplateDefinition | ResourceTemplateTree;
+}
+
+export interface RawTextResourceContent {
+  type: "text";
+  text: string;
+  uri?: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
+export interface RawBlobResourceContent {
+  type: "blob";
+  blob: string;
+  uri?: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
+export interface RawJsonResourceContent {
+  type: "json";
+  value: unknown;
+  uri?: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
+export type ResourceContentInput =
+  | RawTextResourceContent
+  | RawBlobResourceContent
+  | RawJsonResourceContent;
+
+export interface RawResourceResult {
+  contents: ResourceContentInput[];
+}
+
+export type ResourceResponse =
+  | ReadResourceResult
+  | RawResourceResult
+  | ResourceContentInput
+  | ResourceContentInput[]
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+
 export interface NormalizedToolDefinition {
   name: string;
   kind: ConvexFunctionKind;
@@ -162,11 +275,38 @@ export interface NormalizedPromptDefinition {
   handler: PromptHandler<any>;
 }
 
+export interface NormalizedResourceDefinition {
+  name: string;
+  kind: ConvexReadKind;
+  ref: ResourceReference;
+  uri: string;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  size?: number;
+}
+
+export interface NormalizedResourceTemplateDefinition {
+  name: string;
+  kind: ConvexReadKind;
+  ref: ResourceReference;
+  uriTemplate: string;
+  matcher: UriTemplate;
+  title?: string;
+  description?: string;
+  mimeType?: string;
+  annotations?: Annotations;
+  inputShape: Record<string, z.ZodTypeAny>;
+}
+
 export interface DefineMcpServerOptions {
   name: string;
   version: string;
   tools?: ToolTree;
   prompts?: PromptTree;
+  resources?: ResourceTree;
+  resourceTemplates?: ResourceTemplateTree;
 }
 
 export interface BearerAuthConfig {
@@ -192,3 +332,6 @@ export type McpHttpRouter = Pick<HttpRouter, "route">;
 
 export type PromptRole = Role;
 export type PromptContent = ContentBlock;
+export type ResourceAnnotations = Annotations;
+export type ResourceTextContents = TextResourceContents;
+export type ResourceBlobContents = BlobResourceContents;

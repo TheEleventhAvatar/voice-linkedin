@@ -1,12 +1,18 @@
-import { anyApi } from "convex/server";
+import { anyApi, getFunctionName } from "convex/server";
 import { vi } from "vitest";
 import { z } from "zod";
 
 import {
   assistantText,
+  blobResource,
   defineMcpServer,
+  jsonResource,
   prompt,
   promptResult,
+  resource,
+  resourceResult,
+  resourceTemplate,
+  textResource,
   tool,
   userText,
 } from "../src/index.js";
@@ -79,6 +85,49 @@ export const mcp = defineMcpServer({
       ],
     ),
   },
+  resources: {
+    config: resource(anyApi.resources.config, {
+      kind: "query",
+      uri: "config://application",
+      title: "Application Config",
+      description: "Current application config",
+      mimeType: "application/json",
+    }),
+    welcome: resource(anyApi.resources.welcome, {
+      kind: "action",
+      uri: "text://welcome",
+      description: "Welcome text",
+      mimeType: "text/plain",
+    }),
+    latest: {
+      bundle: resource(anyApi.resources.bundle, {
+        kind: "query",
+        uri: "report://latest",
+        description: "Latest report bundle",
+      }),
+    },
+  },
+  resourceTemplates: {
+    files: {
+      byId: resourceTemplate(anyApi.files.byId, {
+        kind: "query",
+        uriTemplate: "file://{fileId}",
+        description: "Read a file by id",
+        mimeType: "text/plain",
+        params: (z) => ({
+          fileId: z.string().describe("The file id to load"),
+        }),
+      }),
+    },
+    docs: {
+      section: resourceTemplate(anyApi.docs.section, {
+        kind: "query",
+        uriTemplate: "docs://{slug}",
+        description: "Read docs by slug",
+        mimeType: "application/json",
+      }),
+    },
+  },
 });
 
 export const promptsOnly = defineMcpServer({
@@ -96,18 +145,58 @@ export const promptsOnly = defineMcpServer({
 
 export function makeCtx() {
   return {
-    runQuery: vi.fn(async (_ref, args) => ({
-      kind: "query",
-      args,
-    })),
+    runQuery: vi.fn(async (ref, args) => {
+      switch (getFunctionName(ref)) {
+        case "resources:config":
+          return jsonResource({
+            version: "1.0.0",
+            features: ["auth", "api", "ui"],
+          });
+        case "resources:bundle":
+          return resourceResult(
+            textResource("Executive Summary...", {
+              uri: "report://latest/summary",
+              mimeType: "text/plain",
+            }),
+            jsonResource(
+              { totalReports: 3 },
+              {
+                uri: "report://latest/data",
+              },
+            ),
+            blobResource("YWJj", "image/png", {
+              uri: "report://latest/chart",
+            }),
+          );
+        case "files:byId":
+          return textResource(`Contents for ${String(args.fileId)}`);
+        case "docs:section":
+          return {
+            slug: args.slug,
+            title: `Doc ${String(args.slug)}`,
+          };
+        default:
+          return {
+            kind: "query",
+            args,
+          };
+      }
+    }),
     runMutation: vi.fn(async (_ref, args) => ({
       kind: "mutation",
       args,
     })),
-    runAction: vi.fn(async (_ref, args) => ({
-      kind: "action",
-      args,
-    })),
+    runAction: vi.fn(async (ref, args) => {
+      switch (getFunctionName(ref)) {
+        case "resources:welcome":
+          return "Hello from resources.";
+        default:
+          return {
+            kind: "action",
+            args,
+          };
+      }
+    }),
   };
 }
 

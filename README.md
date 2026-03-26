@@ -6,9 +6,10 @@ Build a stateless MCP endpoint on top of Convex.
 
 - **Tools** - Register Convex functions as MCP tools
 - **Prompts** - Define MCP prompts with Zod args
+- **Resources** - Expose static and templated MCP resources from Convex functions
 - **Auth** - Optional Bearer auth on `/mcp`
 
-Note: It does not currently support resources, prompt completions, or SSE/session transports.
+Note: It does not currently support prompt/resource completions or SSE/session transports.
 
 ## Quick Start
 
@@ -18,8 +19,12 @@ import { api, internal } from "./_generated/api";
 import {
   assistantText,
   defineMcpServer,
+  jsonResource,
   prompt,
   promptResult,
+  resource,
+  resourceTemplate,
+  textResource,
   tool,
   userText,
 } from "convex-mcp";
@@ -62,6 +67,51 @@ export const mcp = defineMcpServer({
         ]),
     ),
   },
+  resources: {
+    config: resource(api.resources.config, {
+      kind: "query",
+      uri: "config://application",
+      description: "Current application config",
+      mimeType: "application/json",
+    }),
+  },
+  resourceTemplates: {
+    files: {
+      byId: resourceTemplate(api.files.byId, {
+        kind: "query",
+        uriTemplate: "file://{fileId}",
+        description: "Read a file by id",
+        mimeType: "text/plain",
+        params: (z) => ({
+          fileId: z.string().describe("The file id to load"),
+        }),
+      }),
+    },
+  },
+});
+```
+
+And the referenced Convex functions can return resource helpers:
+
+```ts
+// convex/resources.ts
+import { query } from "./_generated/server";
+import { v } from "convex/values";
+import { jsonResource, textResource } from "convex-mcp";
+
+export const config = query({
+  args: {},
+  handler: async () =>
+    jsonResource({
+      version: "1.0.0",
+      features: ["auth", "api", "ui"],
+    }),
+});
+
+export const byId = query({
+  args: { fileId: v.string() },
+  handler: async (_ctx, { fileId }) =>
+    textResource(`Contents for ${fileId}`),
 });
 ```
 
@@ -169,6 +219,48 @@ Prompt handlers can also return a single `PromptMessage` or an array of messages
 | `userText(text)` | Create a user text message |
 | `textContent(text)` | Create a text content block |
 
+## Resources
+
+Use `resource(...)` for fixed URIs and `resourceTemplate(...)` when the URI carries parameters.
+
+```ts
+resources: {
+  config: resource(api.resources.config, {
+    kind: "query",
+    uri: "config://application",
+    mimeType: "application/json",
+  }),
+},
+resourceTemplates: {
+  files: {
+    byId: resourceTemplate(api.files.byId, {
+      kind: "query",
+      uriTemplate: "file://{fileId}",
+      mimeType: "text/plain",
+      params: (z) => ({
+        fileId: z.string(),
+      }),
+    }),
+  },
+}
+```
+
+Notes:
+
+- Static resources do not accept client args; the Convex function is called with `{}`.
+- Resource templates parse params from the requested URI and pass them to your Convex function.
+- `resourceTemplate(..., { params })` is optional. If you omit it, template variables default to `z.string()`.
+- `kind` is limited to `"query"` or `"action"` for resources.
+
+### Resource Helpers
+
+| Helper | Description |
+|--------|-------------|
+| `textResource(text, options?)` | Create a text resource content item |
+| `jsonResource(value, options?)` | Create a JSON resource content item |
+| `blobResource(base64, mimeType, options?)` | Create a binary resource content item |
+| `resourceResult(...contents)` | Return multiple resource content items |
+
 ## Auth
 
 ```ts
@@ -186,9 +278,11 @@ auth: bearerAuth({
 
 | Function | Description |
 |----------|-------------|
-| `defineMcpServer(...)` | Builds a tools/prompts catalog |
+| `defineMcpServer(...)` | Builds a tools/prompts/resources catalog |
 | `tool(api.foo.bar, { kind, args, ... })` | Registers a Convex function ref as an MCP tool |
 | `prompt({ args?, ... }, handler)` | Registers an MCP prompt |
+| `resource(api.foo.bar, { kind, uri, ... })` | Registers a fixed MCP resource |
+| `resourceTemplate(api.foo.bar, { kind, uriTemplate, ... })` | Registers a templated MCP resource |
 | `mcp.addHttpRoutes(http, { path?, auth? })` | Mounts `POST /mcp` on an existing Convex router |
 | `mcp.mcpHttp({ auth? })` | Returns the low-level HTTP handler if you want to mount it yourself |
 | `bearerAuth(...)` | Adds optional env-backed Bearer auth at the HTTP boundary |

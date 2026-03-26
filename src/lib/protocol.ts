@@ -5,12 +5,19 @@ import {
 import { z } from "zod";
 
 import { toPromptResult } from "./prompts.js";
-import { toCallToolResult, toErrorToolResult } from "./result.js";
+import { findResourceByUri, invokeResource } from "./resources.js";
+import {
+  toCallToolResult,
+  toErrorToolResult,
+  toReadResourceResult,
+} from "./result.js";
 import { errorResponse, okResponse } from "./rpc.js";
 import { invokeTool } from "./tools.js";
 import type {
   McpHttpCtx,
   NormalizedPromptDefinition,
+  NormalizedResourceDefinition,
+  NormalizedResourceTemplateDefinition,
   NormalizedToolDefinition,
 } from "./types.js";
 
@@ -18,6 +25,8 @@ export async function handleMessage(
   ctx: McpHttpCtx,
   tools: Map<string, NormalizedToolDefinition>,
   prompts: Map<string, NormalizedPromptDefinition>,
+  resources: Map<string, NormalizedResourceDefinition>,
+  resourceTemplates: Map<string, NormalizedResourceTemplateDefinition>,
   serverInfo: { name: string; version: string },
   protocolVersion: string,
   message: unknown,
@@ -69,6 +78,13 @@ export async function handleMessage(
                   },
                 }
               : {}),
+            ...(resources.size > 0 || resourceTemplates.size > 0
+              ? {
+                  resources: {
+                    listChanged: true,
+                  },
+                }
+              : {}),
           },
           serverInfo,
         },
@@ -91,6 +107,111 @@ export async function handleMessage(
         },
         protocolVersion,
       );
+    case "resources/list":
+      return okResponse(
+        id,
+        {
+          resources: [...resources.values()].map((resource) => ({
+            uri: resource.uri,
+            name: resource.name,
+            title: resource.title,
+            description: resource.description,
+            mimeType: resource.mimeType,
+            annotations: resource.annotations,
+            size: resource.size,
+          })),
+        },
+        protocolVersion,
+      );
+    case "resources/templates/list":
+      return okResponse(
+        id,
+        {
+          resourceTemplates: [...resourceTemplates.values()].map((resource) => ({
+            name: resource.name,
+            uriTemplate: resource.uriTemplate,
+            title: resource.title,
+            description: resource.description,
+            mimeType: resource.mimeType,
+            annotations: resource.annotations,
+          })),
+        },
+        protocolVersion,
+      );
+    case "resources/read": {
+      const uri = rpc.params?.uri;
+      if (typeof uri !== "string") {
+        return errorResponse(
+          id,
+          -32602,
+          'Invalid params: "uri" must be a string.',
+          protocolVersion,
+        );
+      }
+
+      const resolved = findResourceByUri(resources, resourceTemplates, uri);
+      if (!resolved) {
+        return errorResponse(
+          id,
+          -32602,
+          `Unknown resource "${uri}".`,
+          protocolVersion,
+        );
+      }
+
+      if (resolved.kind === "resource") {
+        try {
+          const value = await invokeResource(ctx, resolved.definition, {});
+          return okResponse(
+            id,
+            toReadResourceResult(value, {
+              uri,
+              mimeType: resolved.definition.mimeType,
+            }),
+            protocolVersion,
+          );
+        } catch (error) {
+          return errorResponse(
+            id,
+            -32603,
+            error instanceof Error ? error.message : String(error),
+            protocolVersion,
+          );
+        }
+      }
+
+      const parsedArgs = await z
+        .object(resolved.definition.inputShape)
+        .safeParseAsync(resolved.params);
+
+      if (!parsedArgs.success) {
+        return errorResponse(
+          id,
+          -32602,
+          `Invalid params for resource "${uri}": ${parsedArgs.error.message}`,
+          protocolVersion,
+        );
+      }
+
+      try {
+        const value = await invokeResource(ctx, resolved.definition, parsedArgs.data);
+        return okResponse(
+          id,
+          toReadResourceResult(value, {
+            uri,
+            mimeType: resolved.definition.mimeType,
+          }),
+          protocolVersion,
+        );
+      } catch (error) {
+        return errorResponse(
+          id,
+          -32603,
+          error instanceof Error ? error.message : String(error),
+          protocolVersion,
+        );
+      }
+    }
     case "prompts/list":
       return okResponse(
         id,

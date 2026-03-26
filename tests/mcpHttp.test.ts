@@ -13,6 +13,7 @@ describe("mcpHttp", () => {
     expect(init.status).toBe(200);
     const initBody = await init.json();
     expect(initBody.result.capabilities.prompts.listChanged).toBe(true);
+    expect(initBody.result.capabilities.resources.listChanged).toBe(true);
     expect(initBody.result.capabilities.tools.listChanged).toBe(true);
 
     const listResponse = await invokeHttp(

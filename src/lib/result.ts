@@ -1,4 +1,10 @@
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
+
+import type {
+  RawResourceResult,
+  ResourceContentInput,
+  ResourceResponse,
+} from "./types.js";
 
 function formatStructuredValue(value: unknown) {
   return JSON.stringify(value, null, 2);
@@ -35,5 +41,120 @@ export function toErrorToolResult(error: unknown): CallToolResult {
   return {
     content: [{ type: "text", text: message }],
     isError: true,
+  };
+}
+
+function isResourceContentInput(value: unknown): value is ResourceContentInput {
+  return !!value && typeof value === "object" && !Array.isArray(value) &&
+    "type" in value &&
+    (value.type === "text" || value.type === "blob" || value.type === "json");
+}
+
+function isRawResourceResult(value: unknown): value is RawResourceResult {
+  return !!value && typeof value === "object" && !Array.isArray(value) &&
+    "contents" in value &&
+    Array.isArray(value.contents);
+}
+
+function isReadResourceResult(value: unknown): value is ReadResourceResult {
+  return isRawResourceResult(value) &&
+    value.contents.every((item) =>
+      !!item && typeof item === "object" && "uri" in item &&
+      ("text" in item || "blob" in item)
+    );
+}
+
+function jsonMimeType(defaultMimeType?: string) {
+  return defaultMimeType?.includes("json")
+    ? defaultMimeType
+    : "application/json";
+}
+
+function toReadResourceContents(
+  value: ResourceContentInput,
+  defaults: { uri: string; mimeType?: string },
+) {
+  switch (value.type) {
+    case "text":
+      return {
+        uri: value.uri ?? defaults.uri,
+        mimeType: value.mimeType ?? defaults.mimeType ?? "text/plain",
+        text: value.text,
+        ...(value._meta ? { _meta: value._meta } : {}),
+      };
+    case "blob":
+      return {
+        uri: value.uri ?? defaults.uri,
+        mimeType: value.mimeType ?? defaults.mimeType,
+        blob: value.blob,
+        ...(value._meta ? { _meta: value._meta } : {}),
+      };
+    case "json":
+      return {
+        uri: value.uri ?? defaults.uri,
+        mimeType: value.mimeType ?? jsonMimeType(defaults.mimeType),
+        text: formatStructuredValue(value.value),
+        ...(value._meta ? { _meta: value._meta } : {}),
+      };
+  }
+}
+
+export function toReadResourceResult(
+  value: ResourceResponse,
+  defaults: { uri: string; mimeType?: string },
+): ReadResourceResult {
+  if (isReadResourceResult(value)) {
+    return value;
+  }
+
+  if (isRawResourceResult(value)) {
+    return {
+      contents: value.contents.map((content) =>
+        isResourceContentInput(content)
+          ? toReadResourceContents(content, defaults)
+          : {
+              uri: defaults.uri,
+              mimeType: defaults.mimeType ?? "text/plain",
+              text: formatStructuredValue(content),
+            }
+      ),
+    };
+  }
+
+  if (Array.isArray(value) && value.every(isResourceContentInput)) {
+    const contents = value as ResourceContentInput[];
+    return {
+      contents: contents.map((content) =>
+        toReadResourceContents(content, defaults)
+      ),
+    };
+  }
+
+  if (isResourceContentInput(value)) {
+    return {
+      contents: [toReadResourceContents(value, defaults)],
+    };
+  }
+
+  if (typeof value === "string") {
+    return {
+      contents: [
+        {
+          uri: defaults.uri,
+          mimeType: defaults.mimeType ?? "text/plain",
+          text: value,
+        },
+      ],
+    };
+  }
+
+  return {
+    contents: [
+      {
+        uri: defaults.uri,
+        mimeType: jsonMimeType(defaults.mimeType),
+        text: formatStructuredValue(value),
+      },
+    ],
   };
 }

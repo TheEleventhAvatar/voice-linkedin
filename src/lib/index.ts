@@ -1,5 +1,5 @@
 export { bearerAuth } from "./auth.js";
-export { defineMcpServer, tool } from "./server.js";
+export { defineMcpServer, resource, resourceTemplate, tool } from "./server.js";
 export {
   assistantText,
   prompt,
@@ -8,17 +8,30 @@ export {
   textContent,
   userText,
 } from "./prompts.js";
+export {
+  blobResource,
+  jsonResource,
+  resourceResult,
+  textResource,
+} from "./resources.js";
 export { convexValidatorToJsonSchema, convexValidatorToZod } from "./schema.js";
-export { toCallToolResult, toErrorToolResult } from "./result.js";
+export {
+  toCallToolResult,
+  toErrorToolResult,
+  toReadResourceResult,
+} from "./result.js";
 export type {
   AddMcpHttpRoutesOptions,
   BearerAuthConfig,
   ConvexFunctionKind,
+  ConvexReadKind,
   DefineMcpServerOptions,
   McpHttpRouter,
   McpHttpCtx,
   McpHttpOptions,
   NormalizedPromptDefinition,
+  NormalizedResourceDefinition,
+  NormalizedResourceTemplateDefinition,
   NormalizedToolDefinition,
   PromptArgsBuilder,
   PromptArgsInput,
@@ -32,7 +45,28 @@ export type {
   PromptRole,
   PromptTree,
   RawPromptDefinition,
+  RawBlobResourceContent,
+  RawJsonResourceContent,
+  RawResourceDefinition,
+  RawResourceResult,
+  RawResourceTemplateDefinition,
+  RawTextResourceContent,
   RawToolDefinition,
+  ResourceAnnotations,
+  ResourceBlobContents,
+  ResourceContentInput,
+  ResourceOptions,
+  ResourceParamsBuilder,
+  ResourceParamsInput,
+  ResourceParamsOutput,
+  ResourceParamsSchema,
+  ResourceParamsShape,
+  ResourceReference,
+  ResourceResponse,
+  ResourceTemplateOptions,
+  ResourceTemplateTree,
+  ResourceTextContents,
+  ResourceTree,
   ToolReference,
   ToolOptions,
 } from "./types.js";

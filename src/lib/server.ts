@@ -4,6 +4,14 @@ import { httpActionGeneric } from "convex/server";
 import { enforceAuth } from "./auth.js";
 import { handleMessage } from "./protocol.js";
 import { flattenPrompts, normalizePrompt } from "./prompts.js";
+import {
+  flattenResources,
+  flattenResourceTemplates,
+  normalizeResource,
+  normalizeResourceTemplate,
+  resource,
+  resourceTemplate,
+} from "./resources.js";
 import { errorResponse, JSON_HEADERS } from "./rpc.js";
 import { flattenTools, normalizeTool, tool } from "./tools.js";
 import type {
@@ -15,6 +23,7 @@ import type {
 } from "./types.js";
 
 export { tool };
+export { resource, resourceTemplate };
 
 export function defineMcpServer(options: DefineMcpServerOptions) {
   const normalizedTools = new Map(
@@ -28,6 +37,20 @@ export function defineMcpServer(options: DefineMcpServerOptions) {
       name,
       normalizePrompt(name, definition),
     ]),
+  );
+  const normalizedResources = new Map(
+    flattenResources(options.resources ?? {}).map(([name, definition]) => [
+      name,
+      normalizeResource(name, definition),
+    ]),
+  );
+  const normalizedResourceTemplates = new Map(
+    flattenResourceTemplates(options.resourceTemplates ?? {}).map(
+      ([name, definition]) => [
+        name,
+        normalizeResourceTemplate(name, definition),
+      ],
+    ),
   );
 
   const serverInfo = {
@@ -74,6 +97,8 @@ export function defineMcpServer(options: DefineMcpServerOptions) {
             ctx,
             normalizedTools,
             normalizedPrompts,
+            normalizedResources,
+            normalizedResourceTemplates,
             serverInfo,
             protocolVersion,
             message,
@@ -98,6 +123,8 @@ export function defineMcpServer(options: DefineMcpServerOptions) {
         ctx,
         normalizedTools,
         normalizedPrompts,
+        normalizedResources,
+        normalizedResourceTemplates,
         serverInfo,
         protocolVersion,
         body,
@@ -127,6 +154,8 @@ export function defineMcpServer(options: DefineMcpServerOptions) {
     version: options.version,
     tools: normalizedTools,
     prompts: normalizedPrompts,
+    resources: normalizedResources,
+    resourceTemplates: normalizedResourceTemplates,
     mcpHttp,
     addHttpRoutes,
   };

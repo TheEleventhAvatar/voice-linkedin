@@ -1,7 +1,7 @@
 {
   "name": "convex-mcp",
   "version": "0.1.0",
-  "description": "Convex helpers for exposing MCP tools and prompts",
+  "description": "Convex helpers for exposing MCP tools, prompts, and resources",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
