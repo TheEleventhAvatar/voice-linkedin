@@ -5,7 +5,7 @@ Build a stateless MCP endpoint on top of [Convex](https://convex.dev).
 ## Install
 
 ```bash
-npm install @vibeflow/convex-mcp
+npm install @vibeflowai/convex-mcp
 ```
 
 ## Features
@@ -21,7 +21,7 @@ Define your MCP server:
 ```ts
 // convex/mcp.ts
 import { api, internal } from "./_generated/api";
-import { defineMcpServer, tool, prompt, resource, promptResult, assistantText, userText } from "@vibeflow/convex-mcp";
+import { defineMcpServer, tool, prompt, resource, promptResult, assistantText, userText } from "@vibeflowai/convex-mcp";
 
 export const mcp = defineMcpServer({
   name: "my-app",
@@ -67,7 +67,7 @@ export default http;
 ## Auth
 
 ```ts
-import { bearerAuth } from "@vibeflow/convex-mcp";
+import { bearerAuth } from "@vibeflowai/convex-mcp";
 
 mcp.addHttpRoutes(http, {
   auth: bearerAuth({ env: "MCP_AUTH_TOKEN" }),
