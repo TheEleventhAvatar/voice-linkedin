@@ -1,0 +1,11 @@
+src/
+tests/
+.github/
+.gitignore
+tsconfig.json
+coverage/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+.env
+.env.*

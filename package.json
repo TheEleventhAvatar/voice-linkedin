@@ -24,6 +24,14 @@
     "mcp",
     "component"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vibeflowing-inc/convex-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vibeflowing-inc/convex-mcp/issues"
+  },
+  "homepage": "https://github.com/vibeflowing-inc/convex-mcp#readme",
   "license": "MIT",
   "author": {
     "name": "VibeFlowing inc",
