@@ -19,7 +19,7 @@ A powerful MCP (Model Context Protocol) tool that converts voice notes into prof
   - Slight storytelling elements
   - No emojis (clean business style)
 
-### 🔧 MCP → Tool Execution
+### 🔧 MCP → VibeFlow Convex MCP
 - **Protocol**: Model Context Protocol (MCP)
 - **Server**: Custom MCP server exposes the tool
 - **Client**: Any MCP-compatible AI agent can call the tool
