@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "flow-viewer": "npx -y serve flow-viewer -p 3847"
+  },
   "dependencies": {
     "@vibeflowai/convex-mcp": "^0.1.4",
     "axios": "^1.15.0",

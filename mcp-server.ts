@@ -4,9 +4,12 @@ import { z } from "zod";
 import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const server = new McpServer(
   {
@@ -119,6 +122,80 @@ Rules:
     };
   }
 });
+
+/** Fixed graph payload for pasting into flow-viewer (parse / render smoke tests). */
+const DEBUG_ECHO_FLOW = {
+  name: "debugEcho (MCP test fixture)",
+  nodes: [
+    {
+      id: "webhook_1",
+      type: "webhook",
+      position: { x: 0, y: 120 },
+      data: { label: "Webhook", path: "/api/hook", extraMeta: "ignored-by-viewer" },
+    },
+    {
+      id: "agent_1",
+      type: "agent",
+      position: { x: 280, y: 100 },
+      data: {
+        label: "Agent — summarize",
+        model: "gpt-4o-mini",
+        notes: JSON.stringify({ nested: true, from: "mcp" }),
+      },
+    },
+    {
+      id: "mutation_1",
+      type: "mutation",
+      position: { x: 560, y: 120 },
+      data: { label: "Save to DB", collection: "posts" },
+    },
+    {
+      id: "return_1",
+      type: "return",
+      position: { x: 820, y: 120 },
+      data: { label: "Return response" },
+    },
+  ],
+  edges: [
+    {
+      id: "e1",
+      source: "webhook_1",
+      target: "agent_1",
+      sourceHandle: "output",
+      targetHandle: "input",
+    },
+    {
+      id: "e2",
+      source: "agent_1",
+      target: "mutation_1",
+      sourceHandle: "output",
+      targetHandle: "input",
+    },
+    {
+      id: "e3",
+      source: "mutation_1",
+      target: "return_1",
+      sourceHandle: "output",
+      targetHandle: "input",
+    },
+  ],
+};
+
+server.registerTool(
+  "debugEcho",
+  {
+    description:
+      "Returns sample flow JSON (nodes, edges) for testing flow-viewer paste/parse. No side effects.",
+  },
+  async () => ({
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(DEBUG_ECHO_FLOW, null, 2),
+      },
+    ],
+  })
+);
 
 async function main() {
   const transport = new StdioServerTransport();

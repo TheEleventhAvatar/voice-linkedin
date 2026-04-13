@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VibeFlow — export_flow_json viewer</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --ok: #3fb950;
+        --warn: #d29922;
+        --err: #f85149;
+        --skip: #6e7681;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        --sans: "Segoe UI", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+        min-height: 100vh;
+      }
+      header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+      }
+      header h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      header p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--muted);
+        max-width: 52rem;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.75rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .toolbar label.file {
+        cursor: pointer;
+        padding: 0.4rem 0.75rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.85rem;
+      }
+      .toolbar label.file input {
+        display: none;
+      }
+      .toolbar button {
+        cursor: pointer;
+        padding: 0.4rem 0.75rem;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+      .toolbar button.secondary {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      textarea.json-input {
+        width: 100%;
+        min-height: 120px;
+        margin: 0 1.25rem 0.75rem;
+        width: calc(100% - 2.5rem);
+        padding: 0.65rem 0.75rem;
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        resize: vertical;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+        min-height: calc(100vh - 220px);
+      }
+      @media (max-width: 960px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      section.panel {
+        border-right: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        padding: 1rem 1.25rem;
+        overflow: auto;
+      }
+      section.panel:nth-child(2n) {
+        border-right: none;
+      }
+      @media (max-width: 960px) {
+        section.panel {
+          border-right: none;
+        }
+      }
+      section.panel h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.15rem 0.45rem;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .badge.success {
+        background: rgba(63, 185, 80, 0.2);
+        color: var(--ok);
+      }
+      .badge.failed,
+      .badge.error {
+        background: rgba(248, 81, 73, 0.2);
+        color: var(--err);
+      }
+      .badge.running {
+        background: rgba(88, 166, 255, 0.2);
+        color: var(--accent);
+      }
+      .badge.skipped,
+      .badge.pending {
+        background: rgba(110, 118, 129, 0.25);
+        color: var(--skip);
+      }
+      .badge.definition {
+        background: rgba(210, 153, 34, 0.2);
+        color: var(--warn);
+      }
+      ol.steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      ol.steps li {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.65rem 0.75rem;
+        margin-bottom: 0.5rem;
+        background: var(--panel);
+      }
+      ol.steps li.failed {
+        border-color: rgba(248, 81, 73, 0.45);
+      }
+      ol.steps .step-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.35rem 0.65rem;
+      }
+      ol.steps .step-head strong {
+        font-size: 0.9rem;
+      }
+      ol.steps .meta {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 0.35rem;
+      }
+      ol.steps .err-msg {
+        margin-top: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--err);
+        font-family: var(--mono);
+      }
+      .tool-list {
+        margin: 0.5rem 0 0;
+        padding-left: 1rem;
+        font-size: 0.8rem;
+      }
+      .tool-list li {
+        margin-bottom: 0.35rem;
+        border: none;
+        padding: 0;
+        background: transparent;
+      }
+      .tool-list code {
+        font-family: var(--mono);
+        font-size: 0.76rem;
+        color: var(--accent);
+      }
+      .timeline-wrap {
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+      .timeline {
+        position: relative;
+        height: 56px;
+        min-width: 100%;
+        margin-top: 0.5rem;
+      }
+      .timeline-bar {
+        position: absolute;
+        top: 12px;
+        height: 28px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 4px;
+        box-sizing: border-box;
+      }
+      .timeline-bar.ok {
+        background: #238636;
+      }
+      .timeline-bar.fail {
+        background: #da3633;
+      }
+      .timeline-bar.skip {
+        background: #484f58;
+      }
+      .timeline-bar.synth {
+        background: #1f6feb;
+        opacity: 0.85;
+      }
+      .timeline-ruler {
+        position: relative;
+        height: 14px;
+        margin-top: 4px;
+        border-top: 1px solid var(--border);
+        font-size: 0.65rem;
+        color: var(--muted);
+      }
+      .insights {
+        display: grid;
+        gap: 0.5rem;
+      }
+      .insights .card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.6rem 0.75rem;
+        background: var(--panel);
+        font-size: 0.85rem;
+      }
+      .insights .card h3 {
+        margin: 0 0 0.35rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .empty {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .parse-error {
+        margin: 0 1.25rem 1rem;
+        padding: 0.75rem;
+        background: rgba(248, 81, 73, 0.12);
+        border: 1px solid rgba(248, 81, 73, 0.4);
+        border-radius: 6px;
+        color: var(--err);
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        display: none;
+      }
+      .parse-error.visible {
+        display: block;
+      }
+      .graph-mini {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>VibeFlow <code style="font-size: 0.95em">export_flow_json</code> viewer</h1>
+      <p>
+        Paste the JSON returned by the VibeFlow MCP tool <strong>export_flow_json</strong> (flow graph: nodes
+        &amp; edges). If your export includes an <strong>execution</strong> block (or similar), this page shows
+        steps, tool calls, failures, and a timeline. Otherwise it shows <em>logical</em> run order from the graph.
+      </p>
+    </header>
+    <div class="toolbar">
+      <label class="file">
+        Load JSON file
+        <input type="file" id="file" accept=".json,application/json" />
+      </label>
+      <button type="button" id="loadSample" class="secondary">Load sample</button>
+      <button type="button" id="parseBtn">Parse &amp; render</button>
+    </div>
+    <div id="parseError" class="parse-error"></div>
+    <textarea
+      id="raw"
+      class="json-input"
+      placeholder='Paste export_flow_json result here…'
+      spellcheck="false"
+    ></textarea>
+    <main>
+      <section class="panel">
+        <h2>Graph</h2>
+        <div id="graphSummary" class="graph-mini"></div>
+        <h2 style="margin-top: 1rem">Step-by-step</h2>
+        <ol class="steps" id="steps"></ol>
+      </section>
+      <section class="panel">
+        <h2>Tool calls</h2>
+        <div id="tools"></div>
+        <h2 style="margin-top: 1.25rem">Failures &amp; bottlenecks</h2>
+        <div class="insights" id="insights"></div>
+        <h2 style="margin-top: 1.25rem">Timeline</h2>
+        <div id="timelineNote" class="graph-mini"></div>
+        <div class="timeline-wrap"><div class="timeline" id="timeline"></div></div>
+        <div class="timeline-ruler" id="ruler"></div>
+      </section>
+    </main>
+
+    <script type="module">
+      const $ = (id) => document.getElementById(id);
+
+      /** Bundled sample so "Load sample" works from file:// (fetch to ./samples often blocked). */
+      const SAMPLE_EXPORT_JSON = `{"name":"Example flow (paste your export_flow_json output here)","nodes":[{"id":"webhook_1","type":"webhook","position":{"x":0,"y":120},"data":{"label":"Webhook","path":"/api/hook"}},{"id":"agent_1","type":"agent","position":{"x":280,"y":100},"data":{"label":"Agent — summarize","model":"gpt-4o-mini"}},{"id":"mutation_1","type":"mutation","position":{"x":560,"y":120},"data":{"label":"Save to DB","collection":"posts"}},{"id":"return_1","type":"return","position":{"x":820,"y":120},"data":{"label":"Return response"}}],"edges":[{"id":"e1","source":"webhook_1","target":"agent_1","sourceHandle":"output","targetHandle":"input"},{"id":"e2","source":"agent_1","target":"mutation_1","sourceHandle":"output","targetHandle":"input"},{"id":"e3","source":"mutation_1","target":"return_1","sourceHandle":"output","targetHandle":"input"}],"execution":{"runId":"run_example_001","status":"failed","startedAt":"2026-04-12T10:00:00.000Z","finishedAt":"2026-04-12T10:00:04.200Z","steps":[{"nodeId":"webhook_1","label":"Webhook","status":"success","startedAt":"2026-04-12T10:00:00.000Z","finishedAt":"2026-04-12T10:00:00.080Z","durationMs":80},{"nodeId":"agent_1","label":"Agent — summarize","status":"success","startedAt":"2026-04-12T10:00:00.080Z","finishedAt":"2026-04-12T10:00:03.500Z","durationMs":3420,"toolCalls":[{"name":"search_web","arguments":{"q":"MCP authorization"},"result":{"hits":3},"durationMs":890},{"name":"read_page","arguments":{"url":"https://example.com/doc"},"error":"HTTP 503","durationMs":1200}]},{"nodeId":"mutation_1","label":"Save to DB","status":"failed","startedAt":"2026-04-12T10:00:03.500Z","finishedAt":"2026-04-12T10:00:04.200Z","durationMs":700,"error":"ConvexError: Document too large"},{"nodeId":"return_1","label":"Return response","status":"skipped","error":"Upstream failure"}]}}`;
+
+      function unwrapExport(raw) {
+        if (raw == null) return {};
+        let r = raw;
+        if (Array.isArray(r.content) && r.content[0]?.type === "text" && typeof r.content[0].text === "string") {
+          try {
+            r = JSON.parse(r.content[0].text);
+          } catch {
+            /* keep r */
+          }
+        }
+        if (typeof r === "string") {
+          try {
+            r = JSON.parse(r);
+          } catch {
+            return {};
+          }
+        }
+        if (r.flow && (r.flow.nodes || r.flow.edges)) return { ...r, nodes: r.flow.nodes, edges: r.flow.edges };
+        if (r.data && (r.data.nodes || r.data.edges)) return { ...r, nodes: r.data.nodes, edges: r.data.edges };
+        if (r.graph) return { ...r, nodes: r.graph.nodes ?? r.nodes, edges: r.graph.edges ?? r.edges };
+        return r;
+      }
+
+      function nodeLabel(n) {
+        const d = n?.data;
+        if (typeof d?.label === "string") return d.label;
+        if (typeof n?.label === "string") return n.label;
+        return n?.id ?? "?";
+      }
+
+      /** @param {{nodes?: object[], edges?: object[]}} g */
+      function topologicalSteps(nodes, edges) {
+        const ids = (nodes ?? []).map((n) => String(n.id));
+        const set = new Set(ids);
+        const incoming = new Map(ids.map((id) => [id, 0]));
+        const out = new Map(ids.map((id) => [id, []]));
+        for (const e of edges ?? []) {
+          const s = String(e.source);
+          const t = String(e.target);
+          if (!set.has(s) || !set.has(t)) continue;
+          incoming.set(t, (incoming.get(t) ?? 0) + 1);
+          out.get(s).push(t);
+        }
+        const q = ids.filter((id) => incoming.get(id) === 0);
+        const order = [];
+        while (q.length) {
+          const id = q.shift();
+          order.push(id);
+          for (const t of out.get(id) ?? []) {
+            const v = (incoming.get(t) ?? 0) - 1;
+            incoming.set(t, v);
+            if (v === 0) q.push(t);
+          }
+        }
+        if (order.length < ids.length) {
+          for (const id of ids) if (!order.includes(id)) order.push(id);
+        }
+        return order.map((id) => nodes.find((n) => String(n.id) === id)).filter(Boolean);
+      }
+
+      function findExecution(raw) {
+        const u = unwrapExport(raw);
+        if (u.execution?.steps) return u.execution;
+        if (u.lastRun?.steps) return u.lastRun;
+        if (u.activation?.steps) return u.activation;
+        if (Array.isArray(u.runs) && u.runs[0]?.steps) return u.runs[0];
+        if (Array.isArray(u.executionSteps)) return { steps: u.executionSteps };
+        return null;
+      }
+
+      function mergeSteps(nodes, edges, execution) {
+        const byId = new Map();
+        if (execution?.steps) {
+          for (const s of execution.steps) {
+            const id = String(s.nodeId ?? s.id ?? "");
+            byId.set(id, s);
+          }
+        }
+        const topo = topologicalSteps(nodes, edges);
+        return topo.map((n, i) => {
+          const id = String(n.id);
+          const ex = byId.get(id);
+          const label = ex?.label ?? nodeLabel(n);
+          const status = (ex?.status ?? "definition").toLowerCase();
+          return {
+            order: i + 1,
+            nodeId: id,
+            nodeType: n.type ?? "node",
+            label,
+            status,
+            startedAt: ex?.startedAt,
+            finishedAt: ex?.finishedAt,
+            durationMs: ex?.durationMs ?? ex?.duration,
+            error: ex?.error ?? ex?.message,
+            toolCalls: ex?.toolCalls ?? ex?.tools ?? [],
+          };
+        });
+      }
+
+      function statusBadge(status) {
+        const s = status.toLowerCase();
+        if (s === "success" || s === "completed" || s === "ok") return "success";
+        if (s === "failed" || s === "error") return "failed";
+        if (s === "running" || s === "executing") return "running";
+        if (s === "skipped" || s === "pending" || s === "definition") return s === "definition" ? "definition" : "skipped";
+        return "definition";
+      }
+
+      function renderSteps(steps) {
+        const ol = $("steps");
+        ol.innerHTML = "";
+        if (!steps.length) {
+          ol.innerHTML = '<li class="empty">No nodes in export.</li>';
+          return;
+        }
+        for (const st of steps) {
+          const li = document.createElement("li");
+          const b = statusBadge(st.status);
+          if (b === "failed") li.classList.add("failed");
+          const dur =
+            st.durationMs != null
+              ? `${st.durationMs} ms`
+              : st.startedAt && st.finishedAt
+                ? `${new Date(st.finishedAt) - new Date(st.startedAt)} ms`
+                : "—";
+          li.innerHTML = `
+            <div class="step-head">
+              <span class="badge ${b}">${st.status}</span>
+              <strong>${escapeHtml(st.label)}</strong>
+              <span style="color:var(--muted);font-size:0.8rem">${escapeHtml(st.nodeType)} · ${escapeHtml(st.nodeId)}</span>
+            </div>
+            <div class="meta">Step ${st.order} · duration ${escapeHtml(String(dur))}</div>
+            ${st.error ? `<div class="err-msg">${escapeHtml(st.error)}</div>` : ""}
+          `;
+          if (st.toolCalls?.length) {
+            const ul = document.createElement("ul");
+            ul.className = "tool-list";
+            for (const t of st.toolCalls) {
+              const li2 = document.createElement("li");
+              const err = t.error ? ` <span style="color:var(--err)">— ${escapeHtml(t.error)}</span>` : "";
+              li2.innerHTML = `<code>${escapeHtml(t.name ?? "tool")}</code>${err}`;
+              ul.appendChild(li2);
+            }
+            li.appendChild(ul);
+          }
+          ol.appendChild(li);
+        }
+      }
+
+      function renderTools(steps) {
+        const root = $("tools");
+        root.innerHTML = "";
+        const all = [];
+        for (const st of steps) {
+          for (const t of st.toolCalls ?? []) {
+            all.push({ step: st.label, ...t });
+          }
+        }
+        if (!all.length) {
+          root.innerHTML =
+            '<p class="empty">No tool calls in this export. They appear when execution data includes <code>toolCalls</code> on steps (e.g. Agent node runs).</p>';
+          return;
+        }
+        const ol = document.createElement("ol");
+        ol.className = "steps";
+        ol.style.listStyle = "decimal";
+        ol.style.paddingLeft = "1.25rem";
+        for (const t of all) {
+          const li = document.createElement("li");
+          li.style.marginBottom = "0.65rem";
+          const args = t.arguments ?? t.args ?? t.input;
+          const res = t.result ?? t.output;
+          const err = t.error ? `<div class="err-msg">${escapeHtml(t.error)}</div>` : "";
+          const meta = t.durationMs != null ? ` · ${t.durationMs} ms` : "";
+          li.innerHTML = `
+            <strong><code>${escapeHtml(t.name ?? "tool")}</code></strong><span class="meta"> during “${escapeHtml(t.step)}”${meta}</span>
+            ${args !== undefined ? `<pre style="font-size:0.72rem;overflow:auto;max-height:120px;background:var(--bg);padding:0.5rem;border-radius:4px;border:1px solid var(--border)">${escapeHtml(JSON.stringify(args, null, 2))}</pre>` : ""}
+            ${res !== undefined && !t.error ? `<pre style="font-size:0.72rem;overflow:auto;max-height:120px;background:var(--bg);padding:0.5rem;border-radius:4px;border:1px solid var(--border)">${escapeHtml(JSON.stringify(res, null, 2))}</pre>` : ""}
+            ${err}
+          `;
+          ol.appendChild(li);
+        }
+        root.appendChild(ol);
+      }
+
+      function renderInsights(steps, nodes, edges) {
+        const root = $("insights");
+        root.innerHTML = "";
+        const failed = steps.filter((s) => /fail|error/i.test(s.status) || s.error);
+        const cardFail = document.createElement("div");
+        cardFail.className = "card";
+        cardFail.innerHTML = `<h3>Failures</h3>`;
+        if (!failed.length) cardFail.innerHTML += "<div>No failed steps in this export.</div>";
+        else {
+          const ul = document.createElement("ul");
+          ul.style.margin = "0";
+          ul.style.paddingLeft = "1.1rem";
+          for (const f of failed) {
+            const li = document.createElement("li");
+            li.innerHTML = `<strong>${escapeHtml(f.label)}</strong> — ${escapeHtml(f.error || f.status)}`;
+            ul.appendChild(li);
+          }
+          cardFail.appendChild(ul);
+        }
+        root.appendChild(cardFail);
+
+        const withDur = steps.filter((s) => s.durationMs != null && s.durationMs > 0);
+        const cardB = document.createElement("div");
+        cardB.className = "card";
+        cardB.innerHTML = `<h3>Slowest steps (bottlenecks)</h3>`;
+        if (!withDur.length) {
+          cardB.innerHTML +=
+            "<div>No per-step durations. Run flow activation in VibeFlow and re-export if your payload includes timings, or use logical order only.</div>";
+        } else {
+          const sorted = [...withDur].sort((a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0)).slice(0, 5);
+          const ul = document.createElement("ul");
+          ul.style.margin = "0";
+          ul.style.paddingLeft = "1.1rem";
+          for (const s of sorted) {
+            const li = document.createElement("li");
+            li.textContent = `${s.label} — ${s.durationMs} ms`;
+            ul.appendChild(li);
+          }
+          cardB.appendChild(ul);
+        }
+        root.appendChild(cardB);
+
+        const incoming = new Map((nodes ?? []).map((n) => [String(n.id), 0]));
+        for (const e of edges ?? []) {
+          const t = String(e.target);
+          if (incoming.has(t)) incoming.set(t, incoming.get(t) + 1);
+        }
+        const merges = [...incoming.entries()].filter(([, c]) => c > 1).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        const cardM = document.createElement("div");
+        cardM.className = "card";
+        cardM.innerHTML = `<h3>Merge points (fan-in)</h3>`;
+        if (!merges.length) cardM.innerHTML += "<div>No nodes with multiple incoming edges.</div>";
+        else {
+          const ul = document.createElement("ul");
+          ul.style.margin = "0";
+          ul.style.paddingLeft = "1.1rem";
+          for (const [id, c] of merges) {
+            const li = document.createElement("li");
+            const n = nodes.find((x) => String(x.id) === id);
+            li.textContent = `${nodeLabel(n ?? { id })} (${id}) — ${c} incoming edges`;
+            ul.appendChild(li);
+          }
+          cardM.appendChild(ul);
+        }
+        root.appendChild(cardM);
+      }
+
+      function renderTimeline(steps, execution) {
+        const note = $("timelineNote");
+        const tl = $("timeline");
+        const ruler = $("ruler");
+        tl.innerHTML = "";
+        ruler.innerHTML = "";
+
+        const hasTimes = steps.some((s) => s.startedAt && s.finishedAt);
+        const hasDur = steps.some((s) => s.durationMs != null && s.durationMs > 0);
+
+        if (hasTimes) {
+          note.textContent = "Timeline uses exported start/end timestamps.";
+          let t0 = Infinity;
+          let t1 = 0;
+          for (const s of steps) {
+            if (s.startedAt) t0 = Math.min(t0, new Date(s.startedAt).getTime());
+            if (s.finishedAt) t1 = Math.max(t1, new Date(s.finishedAt).getTime());
+          }
+          if (!Number.isFinite(t0)) t0 = 0;
+          if (t1 <= t0) t1 = t0 + 1;
+          const total = t1 - t0;
+          for (const s of steps) {
+            if (!s.startedAt || !s.finishedAt) continue;
+            const a = new Date(s.startedAt).getTime();
+            const b = new Date(s.finishedAt).getTime();
+            const left = ((a - t0) / total) * 100;
+            const w = Math.max(0.8, ((b - a) / total) * 100);
+            const bar = document.createElement("div");
+            bar.className = "timeline-bar " + (s.error || /fail/i.test(s.status) ? "fail" : /skip/i.test(s.status) ? "skip" : "ok");
+            bar.style.left = `${left}%`;
+            bar.style.width = `${w}%`;
+            bar.title = `${s.label} (${b - a} ms)`;
+            bar.textContent = s.label.length > 18 ? s.label.slice(0, 16) + "…" : s.label;
+            tl.appendChild(bar);
+          }
+          ruler.textContent = `${new Date(t0).toISOString()} → ${new Date(t1).toISOString()} (${total} ms)`;
+        } else if (hasDur) {
+          note.textContent = "Timeline uses step durations only (equal spacing by order).";
+          const total = steps.reduce((acc, s) => acc + (s.durationMs ?? 100), 0);
+          let acc = 0;
+          for (const s of steps) {
+            const d = s.durationMs ?? 100;
+            const left = (acc / total) * 100;
+            const w = (d / total) * 100;
+            acc += d;
+            const bar = document.createElement("div");
+            bar.className = "timeline-bar " + (s.error || /fail/i.test(s.status) ? "fail" : /skip|definition/i.test(s.status) ? "skip" : "ok");
+            bar.style.left = `${left}%`;
+            bar.style.width = `${Math.max(w, 0.5)}%`;
+            bar.title = `${s.label} (${d} ms)`;
+            bar.textContent = String(s.order);
+            tl.appendChild(bar);
+          }
+          ruler.textContent = `Total approx. ${total} ms (from step durations)`;
+        } else {
+          note.textContent =
+            "No timing data in export — showing logical order as equal segments (graph topology). Run Flow Activation and include execution in export when available.";
+          const n = steps.length || 1;
+          steps.forEach((s, i) => {
+            const bar = document.createElement("div");
+            bar.className = "timeline-bar synth";
+            bar.style.left = `${(i / n) * 100}%`;
+            bar.style.width = `${100 / n - 0.5}%`;
+            bar.textContent = String(i + 1);
+            bar.title = s.label;
+            tl.appendChild(bar);
+          });
+          ruler.textContent = `${n} steps (synthetic timeline)`;
+        }
+
+        if (execution?.runId) {
+          note.textContent += ` · run ${execution.runId}`;
+        }
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function parseAndRender() {
+        const errEl = $("parseError");
+        errEl.classList.remove("visible");
+        errEl.textContent = "";
+        let raw;
+        try {
+          raw = JSON.parse($("raw").value.trim() || "{}");
+        } catch (e) {
+          errEl.textContent = "Invalid JSON: " + (e instanceof Error ? e.message : String(e));
+          errEl.classList.add("visible");
+          return;
+        }
+        const data = unwrapExport(raw);
+        const nodes = data.nodes ?? [];
+        const edges = data.edges ?? [];
+        const execution = findExecution(data);
+        const steps = mergeSteps(nodes, edges, execution);
+
+        $("graphSummary").textContent = `${nodes.length} nodes · ${edges.length} edges${execution ? " · execution data present" : " · graph only (logical order)"}`;
+
+        renderSteps(steps);
+        renderTools(steps);
+        renderInsights(steps, nodes, edges);
+        renderTimeline(steps, execution);
+      }
+
+      $("parseBtn").addEventListener("click", parseAndRender);
+      $("file").addEventListener("change", async (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        const text = await f.text();
+        $("raw").value = text;
+        parseAndRender();
+      });
+      $("loadSample").addEventListener("click", async () => {
+        $("raw").value = SAMPLE_EXPORT_JSON;
+        try {
+          $("raw").value = JSON.stringify(JSON.parse(SAMPLE_EXPORT_JSON), null, 2);
+        } catch {
+          /* keep raw string */
+        }
+        parseAndRender();
+      });
+
+      $("raw").value = "";
+    </script>
+  </body>
+</html>

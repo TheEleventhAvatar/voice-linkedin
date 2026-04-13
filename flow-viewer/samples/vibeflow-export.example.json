@@ -1,0 +1,90 @@
+{
+  "name": "Example flow (paste your export_flow_json output here)",
+  "nodes": [
+    {
+      "id": "webhook_1",
+      "type": "webhook",
+      "position": { "x": 0, "y": 120 },
+      "data": { "label": "Webhook", "path": "/api/hook" }
+    },
+    {
+      "id": "agent_1",
+      "type": "agent",
+      "position": { "x": 280, "y": 100 },
+      "data": {
+        "label": "Agent — summarize",
+        "model": "gpt-4o-mini"
+      }
+    },
+    {
+      "id": "mutation_1",
+      "type": "mutation",
+      "position": { "x": 560, "y": 120 },
+      "data": { "label": "Save to DB", "collection": "posts" }
+    },
+    {
+      "id": "return_1",
+      "type": "return",
+      "position": { "x": 820, "y": 120 },
+      "data": { "label": "Return response" }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "webhook_1", "target": "agent_1", "sourceHandle": "output", "targetHandle": "input" },
+    { "id": "e2", "source": "agent_1", "target": "mutation_1", "sourceHandle": "output", "targetHandle": "input" },
+    { "id": "e3", "source": "mutation_1", "target": "return_1", "sourceHandle": "output", "targetHandle": "input" }
+  ],
+  "execution": {
+    "runId": "run_example_001",
+    "status": "failed",
+    "startedAt": "2026-04-12T10:00:00.000Z",
+    "finishedAt": "2026-04-12T10:00:04.200Z",
+    "steps": [
+      {
+        "nodeId": "webhook_1",
+        "label": "Webhook",
+        "status": "success",
+        "startedAt": "2026-04-12T10:00:00.000Z",
+        "finishedAt": "2026-04-12T10:00:00.080Z",
+        "durationMs": 80
+      },
+      {
+        "nodeId": "agent_1",
+        "label": "Agent — summarize",
+        "status": "success",
+        "startedAt": "2026-04-12T10:00:00.080Z",
+        "finishedAt": "2026-04-12T10:00:03.500Z",
+        "durationMs": 3420,
+        "toolCalls": [
+          {
+            "name": "search_web",
+            "arguments": { "q": "MCP authorization" },
+            "result": { "hits": 3 },
+            "durationMs": 890
+          },
+          {
+            "name": "read_page",
+            "arguments": { "url": "https://example.com/doc" },
+            "error": "HTTP 503",
+            "durationMs": 1200
+          }
+        ]
+      },
+      {
+        "nodeId": "mutation_1",
+        "label": "Save to DB",
+        "status": "failed",
+        "startedAt": "2026-04-12T10:00:03.500Z",
+        "finishedAt": "2026-04-12T10:00:04.200Z",
+        "durationMs": 700,
+        "error": "ConvexError: Document too large"
+      },
+      {
+        "nodeId": "return_1",
+        "label": "Return response",
+        "status": "skipped",
+        "error": "Upstream failure"
+      }
+    ]
+  }
+}
