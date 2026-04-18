@@ -10,7 +10,16 @@
 
 import type * as http from "../http.js";
 import type * as mcp from "../mcp.js";
+import type * as ping from "../ping.js";
 import type * as voiceToLinkedInPost from "../voiceToLinkedInPost.js";
+import type * as parseOutreachRequest from "../parseOutreachRequest.js";
+import type * as generateVoiceAssets from "../generateVoiceAssets.js";
+import type * as matchRecruiters from "../matchRecruiters.js";
+import type * as draftOutreachEmail from "../draftOutreachEmail.js";
+import type * as sendOutreachEmail from "../sendOutreachEmail.js";
+import type * as runOutreachPipeline from "../runOutreachPipeline.js";
+import type * as debugEcho from "../debugEcho.js";
+import type * as exportOutreachPipelineFlow from "../exportOutreachPipelineFlow.js";
 
 import type {
   ApiFromModules,
@@ -21,7 +30,16 @@ import type {
 declare const fullApi: ApiFromModules<{
   http: typeof http;
   mcp: typeof mcp;
+  ping: typeof ping;
   voiceToLinkedInPost: typeof voiceToLinkedInPost;
+  parseOutreachRequest: typeof parseOutreachRequest;
+  generateVoiceAssets: typeof generateVoiceAssets;
+  matchRecruiters: typeof matchRecruiters;
+  draftOutreachEmail: typeof draftOutreachEmail;
+  sendOutreachEmail: typeof sendOutreachEmail;
+  runOutreachPipeline: typeof runOutreachPipeline;
+  debugEcho: typeof debugEcho;
+  exportOutreachPipelineFlow: typeof exportOutreachPipelineFlow;
 }>;
 
 /**

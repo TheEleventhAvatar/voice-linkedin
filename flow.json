@@ -1,0 +1,127 @@
+{
+  "name": "Voice Outreach Pipeline (modular nodes)",
+  "nodes": [
+    {
+      "id": "webhook_1",
+      "type": "webhook",
+      "position": { "x": 0, "y": 240 },
+      "data": {
+        "label": "Pipeline Trigger",
+        "path": "/api/outreach/voice"
+      }
+    },
+    {
+      "id": "parse_1",
+      "type": "agent",
+      "position": { "x": 260, "y": 80 },
+      "data": {
+        "label": "Parse Outreach Intent",
+        "model": "ElevenLabs",
+        "toolName": "parseOutreachRequest",
+        "output": ["transcript", "targetRole", "location", "constraints"]
+      }
+    },
+    {
+      "id": "voice_1",
+      "type": "agent",
+      "position": { "x": 260, "y": 250 },
+      "data": {
+        "label": "Generate Voice Assets",
+        "model": "ElevenLabs",
+        "toolName": "generateVoiceAssets",
+        "output": ["personalizedPitch", "audioScript", "voiceConfig"]
+      }
+    },
+    {
+      "id": "match_1",
+      "type": "agent",
+      "position": { "x": 520, "y": 80 },
+      "data": {
+        "label": "Match Recruiters",
+        "model": "ElevenLabs",
+        "toolName": "matchRecruiters",
+        "output": ["matchedRecruiters", "scoreBreakdown"]
+      }
+    },
+    {
+      "id": "draft_1",
+      "type": "agent",
+      "position": { "x": 520, "y": 250 },
+      "data": {
+        "label": "Draft Outreach Email",
+        "model": "ElevenLabs",
+        "toolName": "draftOutreachEmail",
+        "output": ["emailSubject", "emailBody"]
+      }
+    },
+    {
+      "id": "send_1",
+      "type": "mutation",
+      "position": { "x": 800, "y": 180 },
+      "data": {
+        "label": "Send Email",
+        "toolName": "sendOutreachEmail",
+        "provider": "agentmail"
+      }
+    },
+    {
+      "id": "return_1",
+      "type": "return",
+      "position": { "x": 1060, "y": 180 },
+      "data": {
+        "label": "Return Pipeline Result"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "webhook_1",
+      "target": "parse_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e2",
+      "source": "webhook_1",
+      "target": "voice_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e3",
+      "source": "parse_1",
+      "target": "match_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e4",
+      "source": "voice_1",
+      "target": "draft_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e5",
+      "source": "match_1",
+      "target": "draft_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e6",
+      "source": "draft_1",
+      "target": "send_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    },
+    {
+      "id": "e7",
+      "source": "send_1",
+      "target": "return_1",
+      "sourceHandle": "output",
+      "targetHandle": "input"
+    }
+  ]
+}

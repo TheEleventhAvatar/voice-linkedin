@@ -540,21 +540,14 @@ server.registerTool(
   }
 );
 
-server.registerTool(
-  "runOutreachPipeline",
-  {
-    description:
-      "Run the complete modular outreach pipeline and return VibeFlow-style execution steps.",
-    inputSchema: {
-      transcript: z.string().optional().describe("Optional transcript text"),
-      audioFilePath: z.string().optional().describe("Optional audio path for transcription"),
-      inboxId: z.string().optional().describe("AgentMail inbox ID (required when dryRun is false)"),
-      dryRun: z.boolean().optional().describe("If true, skip sending emails"),
-      maxEmails: z.number().optional().describe("Max matched recruiters to send to"),
-      includeFlow: z.boolean().optional().describe("Include flow graph in the response"),
-    },
-  },
-  async (args) => {
+export async function runOutreachPipeline(args: {
+  transcript?: string;
+  audioFilePath?: string;
+  inboxId?: string;
+  dryRun?: boolean;
+  maxEmails?: number;
+  includeFlow?: boolean;
+}) {
     const runId = `run_${Date.now()}`;
     const runStartMs = Date.now();
     const startedAt = nowIso();
@@ -778,6 +771,23 @@ ${voiceOutput.audioScript ? `\n\nVoice script summary:\n${voiceOutput.audioScrip
       };
     }
   }
+}
+
+server.registerTool(
+  "runOutreachPipeline",
+  {
+    description:
+      "Run the complete modular outreach pipeline and return VibeFlow-style execution steps.",
+    inputSchema: {
+      transcript: z.string().optional().describe("Optional transcript text"),
+      audioFilePath: z.string().optional().describe("Optional audio path for transcription"),
+      inboxId: z.string().optional().describe("AgentMail inbox ID (required when dryRun is false)"),
+      dryRun: z.boolean().optional().describe("If true, skip sending emails"),
+      maxEmails: z.number().optional().describe("Max matched recruiters to send to"),
+      includeFlow: z.boolean().optional().describe("Include flow graph in the response"),
+    },
+  },
+  runOutreachPipeline
 );
 
 /** Fixed graph payload for pasting into flow-viewer (parse / render smoke tests). */
