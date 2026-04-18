@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
@@ -10,7 +12,7 @@ export const generateVoiceAssetsAction = action({
   handler: async (ctx, args) => {
     try {
       // Import the main MCP server functionality
-      const { generateVoiceAssets } = await import("../mcp-server-compiled.js");
+      const { generateVoiceAssets } = await import("./mcpNodeWrapper.js");
       
       // Call the actual MCP tool function
       const result = await generateVoiceAssets(args);

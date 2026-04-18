@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { mutation, action } from "./_generated/server";
 
@@ -10,7 +12,7 @@ export const parseOutreachRequestAction = action({
   handler: async (ctx, args) => {
     try {
       // Import the main MCP server functionality
-      const { parseOutreachRequest } = await import("../mcp-server-compiled.js");
+      const { parseOutreachRequest } = await import("./mcpNodeWrapper.js");
       
       // Call the actual MCP tool function
       const result = await parseOutreachRequest(args);

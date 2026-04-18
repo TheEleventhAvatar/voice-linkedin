@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
@@ -6,10 +8,10 @@ export const debugEchoAction = action({
   handler: async (ctx, args) => {
     try {
       // Import the main MCP server functionality
-      const { debugEcho } = await import("../mcp-server-compiled.js");
+      const { debugEcho } = await import("./mcpNodeWrapper.js");
       
       // Call the actual MCP tool function
-      const result = await debugEcho(args);
+      const result = await debugEcho();
       
       return result;
     } catch (error) {

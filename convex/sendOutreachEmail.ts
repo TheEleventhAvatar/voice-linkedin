@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
@@ -12,7 +14,7 @@ export const sendOutreachEmailAction = action({
   handler: async (ctx, args) => {
     try {
       // Import the main MCP server functionality
-      const { sendOutreachEmail } = await import("../mcp-server-compiled.js");
+      const { sendOutreachEmail } = await import("./mcpNodeWrapper.js");
       
       // Call the actual MCP tool function
       const result = await sendOutreachEmail(args);

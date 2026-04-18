@@ -6,7 +6,7 @@ export const exportOutreachPipelineFlowAction = action({
   handler: async (ctx, args) => {
     try {
       // Import the main MCP server functionality
-      const { exportOutreachPipelineFlow } = await import("../mcp-server-compiled.js");
+      const { exportOutreachPipelineFlow } = await import("./mcpNodeWrapper.js");
       
       // Call the actual MCP tool function
       const result = await exportOutreachPipelineFlow();

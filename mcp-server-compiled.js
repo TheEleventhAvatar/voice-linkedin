@@ -1,3 +1,5 @@
+"use node";
+
 // Compiled MCP server functions for Convex integration
 import axios from "axios";
 import FormData from 'form-data';
